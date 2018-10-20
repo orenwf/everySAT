@@ -12,7 +12,7 @@ clauses = []
 
 def solve(count):
     # run it through minisat
-    subprocess.run(['minisat', everysat_cnf, out])
+    subprocess.call(['minisat', everysat_cnf, out])
     # grab output file o, if o is unsat, stop
     with open(out, 'r') as o:
         if o.readline().find('UNSAT') >= 0:
