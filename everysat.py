@@ -2,34 +2,42 @@ import argparse
 import subprocess
 import os
 
-parser = argparse.ArgumentParser(description='Process a DIMACS file.')
-parser.add_argument('in_file', type=str, help='the DIMACS file you want processed')
-args = parser.parse_args()
-everysat_cnf = 'everysat.cnf'
-out = 'm.out'
-subprocess.call(['cp', args.in_file, everysat_cnf])
-clauses = []
+def preprocess(dimacs_in, dimacs_out):
+    with open(dimacs_in, 'r') as i, open(dimacs_out, 'w') as o:
+        for l in i:
+            line = l.lstrip()
+            if line.strip() == '' or line.split()[0] == 'c':
+                continue
+            else:
+                o.write(line)
 
-def solve(count):
+
+def solve(dimacs):
     # run it through minisat
-    subprocess.call(['minisat', everysat_cnf, out])
+    subprocess.call(['minisat', dimacs, 'out'])
     # grab output file o, if o is unsat, stop
-    with open(out, 'r') as o:
+    with open('out', 'r') as o:
         if o.readline().find('UNSAT') >= 0:
-            print('Finished after {} tries'.format(str(count)))
             return None
         else:
             return o.readline()
 
 
+parser = argparse.ArgumentParser(description='Process a DIMACS file.')
+parser.add_argument('in_file', type=str, help='the DIMACS file you want processed')
+args = parser.parse_args()
+everysat_cnf = 'everysat.cnf'
+clauses = []
+preprocess(args.in_file, everysat_cnf)
+
 while True:
-    clause = solve(len(clauses)+1)
+    clause = solve(everysat_cnf)
     if clause == None:
         break
     # grab the last output file, and the cnf file,
     clauses.append(clause)
     # copy the solution, negate the literals
-    negation = ' '.join([str(-int(s)) for s in clause.split()])+'\n'
+    negation = ' '.join(str(-int(s)) for s in clause.split())+'\n'
     with open(everysat_cnf, 'r+') as eso:
         # edit header in the cnf input file
         header = eso.readline().split()
@@ -41,6 +49,6 @@ while True:
         eso.write(negation)
 
 for c in clauses:
-    print('Found additional solution: {}.'.format(c.strip()))
+    print('Found solution: {}.'.format(c.strip()))
 
-os.remove(out)
+os.remove('out')
